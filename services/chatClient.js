@@ -19,25 +19,23 @@ function matchTopic(topic, question) {
 
 function buildContext(question) {
   const q = normalize(question);
-
   const matched = knowledgeChunks
     .filter(chunk => matchTopic(chunk.topic, q))
     .slice(0, 5);
-
+  
   if (matched.length === 0) return "";
-
+  
   return matched.map(c => c.content).join("\n\n");
 }
 
 // ===== BUILD PROMPT =====
 function buildFinalPrompt(question) {
   const context = buildContext(question);
-
+  
   return `
 Bạn là trợ lý học tập Triết học Mác – Lênin.
 Chỉ sử dụng thông tin trong tài liệu bên dưới.
 Không suy diễn ngoài tài liệu.
-
 Nếu không có thông tin, trả lời:
 "Tôi không tìm thấy thông tin trong tài liệu."
 
@@ -52,17 +50,31 @@ ${question}
 // ===== CALL SERVERLESS =====
 export async function chatWithAI(question) {
   const prompt = buildFinalPrompt(question);
+  
+  try {
+    const res = await fetch("/api/gemini", {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json" 
+      },
+      body: JSON.stringify({ prompt })
+    });
 
-  const res = await fetch("/api/gemini", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt })
-  });
+    if (!res.ok) {
+      const errorData = await res.json();
+      console.error("API Error:", errorData);
+      return `Lỗi từ server: ${errorData.error || "Không xác định"}`;
+    }
 
-  const data = await res.json();
-
-  return (
-    data.candidates?.[0]?.content?.parts?.[0]?.text ||
-    "Không nhận được phản hồi từ AI."
-  );
+    const data = await res.json();
+    
+    return (
+      data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "Không nhận được phản hồi từ AI."
+    );
+    
+  } catch (err) {
+    console.error("Client error:", err);
+    return "Lỗi kết nối tới AI. Vui lòng thử lại.";
+  }
 }
