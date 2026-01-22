@@ -513,8 +513,6 @@
       box.innerHTML += `<p><b>👤:</b> ${question}</p>`;
       input.value = "";
   
-      box.innerHTML += `<p><i>🤖 đang suy nghĩ...</i></p>`;
-  
       const answer = await chatWithAI(question);
   
       box.innerHTML += `<p><b>🤖:</b> ${answer}</p>`;
